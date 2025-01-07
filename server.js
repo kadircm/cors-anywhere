@@ -42,6 +42,18 @@ cors_proxy.createServer({
     // Do not add X-Forwarded-For, etc. headers, because Heroku already adds it.
     xfwd: false,
   },
-}).listen(port, host, function() {
+});
+module.exports = (req, res) => {
+  // URL'nin doğru bir şekilde işlenmesini sağla
+  if (!req.url.startsWith('/http')) {
+    res.statusCode = 400;
+    res.end('The URL is invalid: URL should start with http or https.');
+    return;
+  }
+
+  req.url = req.url.replace(/^\/http/, 'http'); // URL'deki ekstra '/' işaretlerini düzelt
+  cors_proxy.emit('request', req, res);
+};
+cors_proxy.listen(port, host, function() {
   console.log('Running CORS Anywhere on ' + host + ':' + port);
 });
