@@ -1,9 +1,8 @@
-// Listen on a specific host via the HOST environment variable
-const host = process.env.HOST || '0.0.0.0';
-// Listen on a specific port via the PORT environment variable
-const port = process.env.PORT || 3000; // Vercel'de port genelde 3000'dir.
-
 const corsAnywhere = require('./lib/cors-anywhere');
+
+// Listen on a specific host and port
+const host = process.env.HOST || '0.0.0.0';
+const port = process.env.PORT || 3000;
 
 // Parse environment variables for blacklist and whitelist
 function parseEnvList(env) {
@@ -16,10 +15,10 @@ function parseEnvList(env) {
 const originBlacklist = parseEnvList(process.env.CORSANYWHERE_BLACKLIST);
 const originWhitelist = parseEnvList(process.env.CORSANYWHERE_WHITELIST);
 
-// Rate-limiting to avoid abuse
+// Rate limiting to avoid abuse
 const checkRateLimit = require('./lib/rate-limit')(process.env.CORSANYWHERE_RATELIMIT);
 
-// Proxy Server Configuration
+// CORS Anywhere server
 const server = corsAnywhere.createServer({
   originBlacklist: originBlacklist,
   originWhitelist: originWhitelist,
@@ -38,7 +37,13 @@ const server = corsAnywhere.createServer({
   },
 });
 
-// Vercel-specific export
+// Middleware to fix malformed URLs
 module.exports = (req, res) => {
+  // Fix malformed URLs (e.g., https:/example.com -> https://example.com)
+  if (req.url.startsWith('/http:/') || req.url.startsWith('/https:/')) {
+    req.url = req.url.replace('/http:/', '/http://').replace('/https:/', '/https://');
+  }
+
+  // Handle the request
   server.emit('request', req, res);
 };
